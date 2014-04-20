@@ -41,10 +41,13 @@ class NewVisitorTest(LiveServerTestCase):
         item1 = 'Buy peacock feathers'
         inputbox.send_keys(item1)
 
-        # When she hits enter, the page updates, and now the page lists
-        # "1: Buy peacock feathers" as an item in a to-do list
+        # When she hits enter, she is token to a new URL,
+        # and now the page lists "1: Buy peacock feathers" as an item in
+        # a to-do list
         inputbox.send_keys(Keys.ENTER)
-
+        edith_list_url = self.browser.current_url
+        ## assertRegexpMatches for Python 2 instead of assertRegex.
+        self.assertRegexpMatches(edith_list_url, '/lists/.+')
         self.check_for_row_in_list_table('1: '+item1)
 
         # There is still a text box inviting her to add another item. She
@@ -55,14 +58,42 @@ class NewVisitorTest(LiveServerTestCase):
         inputbox.send_keys(Keys.ENTER)
 
         # The page updates again, and now shows both items on her list
-        self.check_for_row_in_list_table('1: '+item1)
         self.check_for_row_in_list_table('2: '+item2)
+        self.check_for_row_in_list_table('1: '+item1)
 
-        # Edith wonders whether the site will remember her list. Then she sees
-        # that the site has generated a unique URL for her -- there is some
-        # explanatory text to that effect.
+        # Now a new user, Francis, comes along to the site.
 
-        # She visits that URL - her to-do list is still there.
+        ## We use a new browser session to make sure that no information
+        ## of Edith's is coming through from cookies etc.
+        self.browser.quit()
+        self.browser = webdriver.Firefox()
+
+        # Francis visits the home page. There is no sign of Edith's
+        # list
+        self.browser.get(self.live_server_url)
+        page_text = self.browser.find_element_by_tag_name('body').text
+        self.assertNotIn('Buy peacock feathers', page_text)
+        self.assertNotIn('make a fly', page_text)
+
+        # Francis starts a new list by entering a new item. He
+        # is less interesting than Edith...
+        inputbox = self.browser.find_element_by_id('id_new_item')
+        inputbox.send_keys('Buy milk')
+        inputbox.send_keys(Keys.ENTER)
+
+        # Francis gets his own unique URL
+        francis_list_url = self.browser.current_url
+        ## user assertRegexpMatches for python 2
+        ## self.assertRegex(francis_list_url, '/lists/.+')
+        self.assertRegexpMatches(francis_list_url, '/lists/.+')
+        self.assertNotEqual(edith_list_url, francis_list_url)
+        self.check_for_row_in_list_table('1: Buy milk')
+
+        # Again, there is not trace of Edith's list
+        page_text = self.browser.find_element_by_tag_name('body').text
+        self.assertNotIn('Buy peacock feathers', page_text)
+        self.assertNotIn('make a fly', page_text)
+
+
+        # Satisfied, they both go back to sleep
         self.fail('Finish the test!')
-
-        # Satisfied, she goes back to sleep
