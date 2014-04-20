@@ -38,22 +38,28 @@ class HomePageTest(TestCase):
         resp = home_page(request)
 
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(resp['location'], '/')
+        self.assertEqual(resp['location'], '/lists/the-unique-list-id/')
 
     def test_home_page_only_saves_items_when_necessary(self):
         request = HttpRequest()
         home_page(request)
         self.assertEqual(Item.objects.count(), 0)
 
-    def test_home_page_can_displays_all_list_items(self):
+
+class ListViewTest(TestCase):
+
+    def test_use_list_template(self):
+        resp = self.client.get('/lists/the-unique-list-id/')
+        self.assertTemplateUsed(resp, 'list.html')
+
+    def test_displays_all_items(self):
         Item.objects.create(text='itemey 1')
         Item.objects.create(text='itemey 2')
 
-        request = HttpRequest()
-        resp = home_page(request)
+        resp = self.client.get('/lists/the-unique-list-id/')
 
-        self.assertIn('itemey 1', resp.content.decode())
-        self.assertIn('itemey 2', resp.content.decode())
+        self.assertContains(resp, 'itemey 1')
+        self.assertContains(resp, 'itemey 2')
 
 
 class ItemModelTest(TestCase):
